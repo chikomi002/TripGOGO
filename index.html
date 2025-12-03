@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>豬家旅行記帳 (自訂資料庫版)</title>
-       <!-- 強制指定完整網址，iPhone 才不會迷路 -->
+    <title>豬家旅行記帳 (正式上線版)</title>
+    <!-- 強制指定完整網址，iPhone 才不會迷路 -->
     <link rel="icon" href="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true">
     <link rel="apple-touch-icon" href="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -357,26 +357,26 @@
 </div>
 
 <script type="module">
-   const firebaseConfig = {
-  apiKey: "AIzaSyCrNe8ZxZCofC5mxlmkXJ-Jjr5bA19_B4I",
-  authDomain: "trip-app-2026.firebaseapp.com",
-  projectId: "trip-app-2026",
-  storageBucket: "trip-app-2026.firebasestorage.app",
-  messagingSenderId: "92743336008",
-  appId: "1:92743336008:web:7e5da82d9b10cd8f67587d",
-  measurementId: "G-DDSMLPDLJP"
-};
-    
-    // 目前預設為 null (會使用系統內建的測試用 config)
-    const userConfig = null;
+    // ---------------------------------------------------------
+    // 🔴 這裡就是您的鑰匙！
+    // ---------------------------------------------------------
+    const userConfig = {
+      apiKey: "AIzaSyCrNe8ZxZCofC5mxlmkXJ-Jjr5bA19_B4I",
+      authDomain: "trip-app-2026.firebaseapp.com",
+      projectId: "trip-app-2026",
+      storageBucket: "trip-app-2026.firebasestorage.app",
+      messagingSenderId: "92743336008",
+      appId: "1:92743336008:web:7e5da82d9b10cd8f67587d",
+      measurementId: "G-DDSMLPDLJP"
+    };
 
     // ---------------------------------------------------------
     // 以下程式碼無需更動
     // ---------------------------------------------------------
 
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const envConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-    const firebaseConfig = userConfig || envConfig;
+    // 優先使用您的 userConfig，如果為 null 則使用環境變數（僅在測試環境有效）
+    const firebaseConfig = userConfig || (typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null);
     const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -621,3 +621,5 @@
 
 </body>
 </html>
+
+
