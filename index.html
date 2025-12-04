@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TripGoGo 旅行記帳</title>
-       <!-- 強制指定完整網址，iPhone 才不會迷路 -->
+    <!-- 1. 修正：App 圖標換回您的豬豬機長圖 -->
     <link rel="icon" href="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true">
     <link rel="apple-touch-icon" href="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true">
-    <!-- App 圖標設定 -->
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
@@ -93,8 +93,10 @@
         
         <!-- Header -->
         <div class="mb-6 text-center relative">
-            <h1 class="text-3xl font-extrabold milk-tea-text tracking-tight">
-                ✈️ {{ appTitle }}
+            <h1 class="text-3xl font-extrabold milk-tea-text tracking-tight flex items-center justify-center gap-2">
+                <!-- Header 小圖標 -->
+                <img src="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true" class="w-8 h-8 rounded-lg shadow-sm">
+                {{ appTitle }}
             </h1>
             
             <!-- Admin Edit Button (Only visible if currentUser is Admin) -->
@@ -113,8 +115,9 @@
         </div>
 
         <!-- 0. Loading -->
-        <div v-if="isInitializing" class="text-center py-20 bg-white rounded-xl shadow-inner">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600 mx-auto mb-4"></div>
+        <div v-if="isInitializing" class="text-center py-20 bg-white rounded-xl shadow-inner flex flex-col items-center justify-center">
+            <!-- Loading 時也顯示小豬 -->
+            <img src="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true" class="w-20 h-20 rounded-2xl mb-4 animate-bounce shadow-lg">
             <p class="text-gray-600 font-bold animate-pulse">TripGoGo為您加載中🐽</p>
         </div>
         
@@ -122,9 +125,8 @@
         <div v-if="!isInitializing && !currentUser" class="modal-overlay">
             <div class="modal-content">
                 <div class="text-center mb-6">
-                    <div class="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i data-lucide="plane" class="w-8 h-8 text-orange-600"></i>
-                    </div>
+                    <!-- 2. 修正：登入畫面顯示大張的豬豬圖 -->
+                    <img src="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true" class="w-24 h-24 rounded-3xl mx-auto mb-4 shadow-lg border-4 border-white">
                     <h2 class="text-2xl font-extrabold milk-tea-text">歡迎使用 TripGoGo</h2>
                     <p class="text-xs text-gray-500 mt-1">輸入相同的「群組代碼」即可與朋友共享行程</p>
                 </div>
@@ -818,6 +820,11 @@
     };
     Vue.createApp(App).mount('#app');
 </script>
+
+</body>
+</html>
+
+
 
 </body>
 </html>
