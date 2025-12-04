@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>豬家旅行記帳 (圖標修復版)</title>
-    <!-- 強制指定完整網址 -->
-    <link rel="icon" href="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true">
-    <link rel="apple-touch-icon" href="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true">
+    <title>TripGoGo 旅行記帳</title>
+    <!-- App 圖標設定 -->
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/201/201623.png">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
     <style>
@@ -18,6 +18,7 @@
             --color-latte: #d2b48c;
             --color-mocha: #6f4e37;
             --color-text: #2c2c2c;
+            --color-accent: #d97706; /* Amber-600 */
         }
 
         body {
@@ -67,84 +68,142 @@
             overflow-y: auto;
         }
 
-        .role-card { transition: all 0.2s; }
-        .role-card:active { transform: scale(0.95); }
-        .milk-tea-bg { background-color: var(--color-cream); }
         .milk-tea-text { color: var(--color-mocha); }
+        
+        /* Login Form Styles */
+        .login-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            transition: all 0.3s;
+            outline: none;
+        }
+        .login-input:focus {
+            border-color: var(--color-accent);
+            background-color: #fffbeb;
+        }
     </style>
 </head>
-<body class="milk-tea-bg p-4 sm:p-6">
+<body class="p-4 sm:p-6">
 
 <div id="app">
-    <main class="milk-tea-bg rounded-xl shadow-lg p-4 sm:p-6 min-h-[90vh]">
+    <main class="rounded-xl shadow-lg p-4 sm:p-6 min-h-[90vh] relative">
         
         <!-- Header -->
         <div class="mb-6 text-center relative">
-            <h1 class="text-3xl font-extrabold milk-tea-text">
-                🌍 {{ appTitle }}
+            <h1 class="text-3xl font-extrabold milk-tea-text tracking-tight">
+                ✈️ {{ appTitle }}
             </h1>
             
-            <!-- Admin Edit Button -->
-            <button v-if="userProfile && userProfile.id === 'sister' && tripExists" 
+            <!-- Admin Edit Button (Only visible if currentUser is Admin) -->
+            <button v-if="currentUser && currentUser.isAdmin && tripExists" 
                 @click="openEditSettings"
                 class="absolute top-1 right-0 text-gray-400 hover:text-gray-600 p-2">
                 <i data-lucide="settings" class="w-6 h-6"></i>
             </button>
 
-            <p v-if="userProfile" class="text-sm text-gray-500 mt-2 font-bold flex items-center justify-center gap-1">
-                嗨，{{ userProfile.name }} {{ userProfile.icon }}
-                <button @click="logout" class="text-[10px] bg-gray-200 px-2 py-0.5 rounded text-gray-500 ml-2 hover:bg-gray-300">切換身份</button>
+            <p v-if="currentUser" class="text-sm text-gray-500 mt-2 font-bold flex items-center justify-center gap-1">
+                Hi, {{ currentUser.name }} 
+                <span v-if="currentUser.isAdmin" class="bg-yellow-100 text-yellow-700 text-[10px] px-1 rounded border border-yellow-200">管理員</span>
+                <span v-else class="bg-gray-100 text-gray-600 text-[10px] px-1 rounded border border-gray-200">成員</span>
+                <button @click="logout" class="text-[10px] underline text-gray-400 ml-2 hover:text-gray-600">登出</button>
             </p>
         </div>
 
         <!-- 0. Loading -->
         <div v-if="isInitializing" class="text-center py-20 bg-white rounded-xl shadow-inner">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600 mx-auto mb-4"></div>
-            <p class="text-gray-600 font-bold">資料同步中...</p>
+            <p class="text-gray-600 font-bold animate-pulse">TripGoGo為您加載中🐽</p>
         </div>
         
-        <!-- 1. Identity Selection -->
-        <div v-if="!isInitializing && !userProfile" class="modal-overlay">
-            <div class="modal-content text-center">
-                <h2 class="text-2xl font-extrabold milk-tea-text mb-6">請問你是哪位家人？</h2>
-                <div class="grid grid-cols-2 gap-4">
-                    <button v-for="member in familyMembers" :key="member.id" 
-                        @click="selectIdentity(member)"
-                        class="role-card flex flex-col items-center justify-center p-4 bg-white border-2 border-transparent hover:border-yellow-600 rounded-xl shadow-md h-32">
-                        <span class="text-4xl mb-2">{{ member.icon }}</span>
-                        <span class="font-bold text-lg text-gray-700">{{ member.name }}</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 2. Create Trip -->
-        <div v-if="!isInitializing && userProfile && !tripExists" class="modal-overlay">
+        <!-- 1. Universal Login Form -->
+        <div v-if="!isInitializing && !currentUser" class="modal-overlay">
             <div class="modal-content">
-                <h2 class="text-2xl font-extrabold text-center milk-tea-text mb-4">建立新行程</h2>
-                <p class="text-xs text-gray-500 text-center mb-4">目前沒有資料，請設定旅遊地點。</p>
+                <div class="text-center mb-6">
+                    <div class="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i data-lucide="plane" class="w-8 h-8 text-orange-600"></i>
+                    </div>
+                    <h2 class="text-2xl font-extrabold milk-tea-text">歡迎使用 TripGoGo</h2>
+                    <p class="text-xs text-gray-500 mt-1">輸入相同的「群組代碼」即可與朋友共享行程</p>
+                </div>
+                
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-bold mb-1">App 標題</label>
-                        <input type="text" v-model="wizard.appNameInput" class="w-full p-3 border rounded-lg" />
+                        <label class="block text-sm font-bold mb-1 text-gray-700">群組代碼 (Group ID)</label>
+                        <div class="relative">
+                            <i data-lucide="users" class="absolute left-3 top-3 w-5 h-5 text-gray-400"></i>
+                            <input type="text" v-model="loginForm.groupId" class="login-input pl-10" placeholder="例如: Tokyo2024" />
+                        </div>
                     </div>
+
                     <div>
-                        <label class="block text-sm font-bold mb-1">目的地</label>
-                        <input type="text" v-model="wizard.destinationInput" class="w-full p-3 border rounded-lg" placeholder="例: 大阪" />
+                        <label class="block text-sm font-bold mb-1 text-gray-700">您的暱稱</label>
+                        <div class="relative">
+                            <i data-lucide="user" class="absolute left-3 top-3 w-5 h-5 text-gray-400"></i>
+                            <input type="text" v-model="loginForm.name" class="login-input pl-10" placeholder="例如: 小明" />
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-1">匯率 ({{ detectedSettings.currency }} 對台幣)</label>
-                        <input type="number" v-model.number="wizard.rateInput" step="0.001" class="w-full p-3 border rounded-lg" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-1">日期</label>
+
+                    <!-- Role Selection -->
+                    <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                        <span class="block text-xs font-bold text-gray-500 mb-2">選擇身分</span>
                         <div class="flex gap-2">
-                            <input type="date" v-model="wizard.startDateInput" class="w-full p-3 border rounded-lg" />
-                            <input type="date" v-model="wizard.endDateInput" class="w-full p-3 border rounded-lg" />
+                            <button @click="loginForm.isAdmin = false" 
+                                :class="['flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-1', !loginForm.isAdmin ? 'bg-white border-2 border-gray-400 text-gray-700 shadow-sm' : 'text-gray-400 hover:bg-gray-100']">
+                                成員
+                            </button>
+                            <button @click="loginForm.isAdmin = true"
+                                :class="['flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-1', loginForm.isAdmin ? 'bg-white border-2 border-orange-500 text-orange-700 shadow-sm' : 'text-gray-400 hover:bg-gray-100']">
+                                <i data-lucide="shield" class="w-3 h-3"></i> 管理員
+                            </button>
                         </div>
                     </div>
                 </div>
-                <button @click="createTrip" :disabled="!isWizardValid" :class="['w-full mt-6 py-3 font-bold rounded-lg text-white', isWizardValid ? 'bg-yellow-600' : 'bg-gray-300']">建立</button>
+
+                <button @click="handleLogin" :disabled="!isLoginValid" 
+                    :class="['w-full mt-6 py-3 font-bold rounded-lg text-white shadow-md transition-transform active:scale-95', isLoginValid ? 'bg-orange-600 hover:bg-orange-700' : 'bg-gray-300 cursor-not-allowed']">
+                    進入旅程
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. Create Trip (Only for Admin if trip doesn't exist) -->
+        <div v-if="!isInitializing && currentUser && !tripExists" class="modal-overlay">
+            <div class="modal-content">
+                <div v-if="currentUser.isAdmin">
+                    <h2 class="text-2xl font-extrabold text-center milk-tea-text mb-4">建立新行程</h2>
+                    <p class="text-xs text-gray-500 text-center mb-4">群組「{{ currentUser.groupId }}」尚無資料。<br>身為管理員，請設定旅遊地點。</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-1">App 標題</label>
+                            <input type="text" v-model="wizard.appNameInput" class="w-full p-3 border rounded-lg" placeholder="例如: 大阪爆買團" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1">目的地</label>
+                            <input type="text" v-model="wizard.destinationInput" class="w-full p-3 border rounded-lg" placeholder="例: 大阪" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1">匯率 ({{ detectedSettings.currency }} 對台幣)</label>
+                            <input type="number" v-model.number="wizard.rateInput" step="0.001" class="w-full p-3 border rounded-lg" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1">日期</label>
+                            <div class="flex gap-2">
+                                <input type="date" v-model="wizard.startDateInput" class="w-full p-3 border rounded-lg" />
+                                <input type="date" v-model="wizard.endDateInput" class="w-full p-3 border rounded-lg" />
+                            </div>
+                        </div>
+                    </div>
+                    <button @click="createTrip" :disabled="!isWizardValid" :class="['w-full mt-6 py-3 font-bold rounded-lg text-white', isWizardValid ? 'bg-orange-600' : 'bg-gray-300']">建立行程</button>
+                </div>
+                <div v-else class="text-center">
+                    <h2 class="text-xl font-bold mb-2">等待行程建立</h2>
+                    <div class="text-6xl mb-4">⏳</div>
+                    <p class="text-gray-500 text-sm">此群組尚未建立行程。</p>
+                    <p class="text-gray-500 text-sm mt-2">請聯絡您的<b>管理員</b>來設定行程。</p>
+                    <button @click="logout" class="mt-6 text-orange-600 underline text-sm">返回登入</button>
+                </div>
             </div>
         </div>
 
@@ -189,11 +248,10 @@
         </div>
 
         <!-- 3. Wallet Setup -->
-        <div v-if="!isInitializing && userProfile && tripExists && !walletSetupComplete" class="modal-overlay">
+        <div v-if="!isInitializing && currentUser && tripExists && !walletSetupComplete" class="modal-overlay">
             <div class="modal-content">
                 <div class="text-center mb-4">
-                    <span class="text-4xl block mb-2">{{ userProfile.icon }}</span>
-                    <h2 class="text-2xl font-extrabold milk-tea-text">設定 {{ userProfile.name }} 的錢包</h2>
+                    <h2 class="text-2xl font-extrabold milk-tea-text">設定 {{ currentUser.name }} 的錢包</h2>
                 </div>
                 <p class="text-xs text-gray-500 text-center mb-4">這是您個人的私房錢，<br>請輸入您這次帶了多少台幣。</p>
                 <div class="space-y-4 pt-4 border-t border-gray-200">
@@ -206,19 +264,19 @@
                         <span class="font-bold text-lg">{{ joinerForeignCalculated.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</span>
                     </div>
                 </div>
-                <button @click="setupMyWallet" class="w-full mt-6 py-3 font-bold rounded-lg bg-yellow-600 text-white">開啟我的錢包</button>
+                <button @click="setupMyWallet" class="w-full mt-6 py-3 font-bold rounded-lg bg-orange-600 text-white">開啟我的錢包</button>
             </div>
         </div>
 
         <!-- 4. Main Interface -->
-        <div v-else-if="!isInitializing && userProfile && tripExists && walletSetupComplete">
+        <div v-else-if="!isInitializing && currentUser && tripExists && walletSetupComplete">
             
             <!-- Wallet Summary (Always Global) -->
             <section class="p-4 bg-white rounded-xl shadow-lg mb-6 border border-gray-100 relative overflow-hidden">
-                <div class="absolute top-0 right-0 bg-yellow-600 text-white text-[10px] px-2 py-1 rounded-bl-lg font-bold">Private</div>
+                <div class="absolute top-0 right-0 bg-orange-600 text-white text-[10px] px-2 py-1 rounded-bl-lg font-bold">Private</div>
                 <h3 class="text-lg font-extrabold flex items-center milk-tea-text mb-2">
                     <i data-lucide="wallet" class="w-5 h-5 mr-2"></i>
-                    {{ userProfile.name }} 的餘額 (總覽)
+                    {{ currentUser.name }} 的餘額
                 </h3>
                 <div class="flex flex-col space-y-1">
                     <div class="flex justify-between items-center text-base">
@@ -234,8 +292,8 @@
             
             <!-- Tabs -->
             <div class="flex justify-center mb-6 space-x-2">
-                <button @click="activeTab = 'itinerary'" :class="['flex-1 py-2 rounded-xl font-bold border transition-colors', activeTab === 'itinerary' ? 'bg-yellow-600 text-white' : 'bg-gray-100 text-gray-600']">共用行程</button>
-                <button @click="activeTab = 'wallet'" :class="['flex-1 py-2 rounded-xl font-bold border transition-colors', activeTab === 'wallet' ? 'bg-yellow-600 text-white' : 'bg-gray-100 text-gray-600']">記帳</button>
+                <button @click="activeTab = 'itinerary'" :class="['flex-1 py-2 rounded-xl font-bold border transition-colors', activeTab === 'itinerary' ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-600']">共用行程</button>
+                <button @click="activeTab = 'wallet'" :class="['flex-1 py-2 rounded-xl font-bold border transition-colors', activeTab === 'wallet' ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-600']">記帳</button>
             </div>
 
             <!-- Date Selection (Controls both Itinerary and Wallet Filter) -->
@@ -243,7 +301,7 @@
                 <h3 class="text-xl font-bold mb-3">日期 ({{ selectedDateDisplay }})</h3>
                 <div class="flex space-x-3 pb-3 horizontal-scroll-container overflow-x-scroll">
                     <template v-for="(date, index) in tripDays" :key="date.iso">
-                        <button @click="selectedDate = date.iso" :class="['py-2 px-4 rounded-full font-bold flex-shrink-0 shadow-md', selectedDate === date.iso ? 'bg-yellow-600 text-white' : 'bg-white text-gray-600']">
+                        <button @click="selectedDate = date.iso" :class="['py-2 px-4 rounded-full font-bold flex-shrink-0 shadow-md', selectedDate === date.iso ? 'bg-orange-600 text-white' : 'bg-white text-gray-600']">
                             {{ date.display }}
                         </button>
                     </template>
@@ -261,7 +319,7 @@
                          @click="focusMap(item.location)"
                          class="itinerary-card p-4 bg-white rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:bg-orange-50 relative group">
                         
-                        <div class="absolute right-2 top-2 text-[10px] text-gray-300 group-hover:text-yellow-600 transition-colors">
+                        <div class="absolute right-2 top-2 text-[10px] text-gray-300 group-hover:text-orange-600 transition-colors">
                             <i data-lucide="map-pin" class="w-3 h-3 inline"></i> 點擊看地圖
                         </div>
 
@@ -271,24 +329,25 @@
                                 <p class="text-sm text-gray-500">{{ item.notes }}</p>
                             </div>
                             <div class="flex flex-col space-y-2 ml-4" @click.stop>
-                                <button @click="editItem(selectedDate, index)" class="p-2 bg-gray-100 rounded-full flex items-center justify-center text-gray-600"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                                <button @click="deleteItem(selectedDate, index)" class="p-2 bg-red-100 rounded-full flex items-center justify-center text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                <button v-if="currentUser.isAdmin || true" @click="editItem(selectedDate, index)" class="p-2 bg-gray-100 rounded-full flex items-center justify-center text-gray-600"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                                <button v-if="currentUser.isAdmin" @click="deleteItem(selectedDate, index)" class="p-2 bg-red-100 rounded-full flex items-center justify-center text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                             </div>
                         </div>
                         <div v-else class="space-y-2" @click.stop>
                             <input v-model="item.time" type="time" class="w-full p-2 border rounded" />
                             <input v-model="item.location" class="w-full p-2 border rounded" placeholder="地點" />
                             <input v-model="item.notes" class="w-full p-2 border rounded" placeholder="備註" />
-                            <button @click="saveItem(selectedDate, index)" class="w-full py-2 bg-yellow-600 text-white rounded font-bold">儲存</button>
+                            <button @click="saveItem(selectedDate, index)" class="w-full py-2 bg-orange-600 text-white rounded font-bold">儲存</button>
                         </div>
                     </div>
                 </div>
+                <!-- Allow anyone to add items, or just admin? Let's allow anyone for convenience, or stick to admin -->
                 <button @click="addNewItem(selectedDate)" class="w-full mt-4 py-3 bg-gray-800 text-white font-bold rounded-lg shadow-md flex items-center justify-center">
                     <i data-lucide="plus" class="w-5 h-5 mr-2"></i> 新增行程
                 </button>
                 <section class="mt-8">
                      <div v-if="mapUrl" class="rounded-lg overflow-hidden border border-gray-200 shadow-lg relative">
-                        <div v-if="selectedLocation" class="absolute top-0 left-0 bg-yellow-600 text-white text-xs px-2 py-1 z-10 rounded-br">
+                        <div v-if="selectedLocation" class="absolute top-0 left-0 bg-orange-600 text-white text-xs px-2 py-1 z-10 rounded-br">
                             📍 正在檢視: {{ selectedLocation }}
                         </div>
                         <iframe :src="mapUrl" width="100%" height="250" style="border:0;" loading="lazy"></iframe>
@@ -296,12 +355,32 @@
                 </section>
             </div>
             
-            <!-- Wallet Tab (Updated) -->
+            <!-- Wallet Tab -->
             <div v-if="activeTab === 'wallet'">
+                <!-- Currency Converter -->
+                <div class="p-4 bg-orange-100 rounded-xl shadow-md mb-6 border border-orange-200">
+                    <h4 class="font-extrabold text-lg mb-3 milk-tea-text flex items-center">
+                        <i data-lucide="calculator" class="w-5 h-5 mr-2"></i> 匯率換算小幫手
+                    </h4>
+                    <div class="grid grid-cols-2 gap-3 mb-2">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 mb-1">匯率 ({{ tripSettings.currency }} → TWD)</label>
+                            <input type="number" v-model.number="converter.rate" step="0.001" class="w-full p-2 border border-orange-200 rounded-lg text-sm" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 mb-1">輸入 {{ tripSettings.currency }}</label>
+                            <input type="number" v-model.number="converter.amount" placeholder="金額" class="w-full p-2 border border-orange-200 rounded-lg text-sm text-right bg-white" />
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center bg-white p-2 rounded-lg border border-orange-100">
+                        <span class="text-sm font-bold text-gray-500">換算結果 (TWD)</span>
+                        <span class="text-xl font-extrabold text-orange-600">{{ converterResult.toLocaleString() }}</span>
+                    </div>
+                </div>
+
                 <div class="p-4 bg-white rounded-xl shadow-lg mb-6">
                     <h4 class="font-extrabold text-lg mb-3 milk-tea-text">新增交易 ({{ selectedDateDisplay }})</h4>
                     <div class="space-y-3">
-                        <!-- Date and Time Picker -->
                         <div class="flex space-x-2">
                             <input type="date" v-model="newTransaction.date" class="w-3/5 p-2 border rounded-lg text-sm bg-gray-50" />
                             <input type="time" v-model="newTransaction.time" class="w-2/5 p-2 border rounded-lg text-sm bg-gray-50" />
@@ -348,7 +427,7 @@
                             </div>
                             <input type="text" v-model="editingTransaction.notes" class="w-full p-2 border rounded" />
                             <div class="flex space-x-2">
-                                <button @click="saveTransactionEdit" class="flex-1 py-2 bg-green-600 text-white rounded text-sm font-bold">確認修改</button>
+                                <button @click="saveTransactionEdit" class="flex-1 py-2 bg-green-600 text-white rounded text-sm font-bold">確認</button>
                                 <button @click="cancelTransactionEdit" class="flex-1 py-2 bg-gray-400 text-white rounded text-sm">取消</button>
                             </div>
                         </div>
@@ -381,6 +460,7 @@
 </div>
 
 <script type="module">
+   // Firebase Config
    const userConfig = {
       apiKey: "AIzaSyCrNe8ZxZCofC5mxlmkXJ-Jjr5bA19_B4I",
       authDomain: "trip-app-2026.firebaseapp.com",
@@ -393,51 +473,57 @@
 
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
     const envConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-    const firebaseConfig = userConfig || envConfig;
+    const firebaseConfig = envConfig || userConfig;
     const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, onSnapshot, deleteDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     
     const { ref, computed, watch, onMounted, nextTick } = Vue;
     const generateId = () => Math.random().toString(36).substring(2, 9);
     
-    const FAMILY_MEMBERS = [
-        { id: 'sister', name: '豬姐', icon: '👑' },
-        { id: 'dad', name: '豬爸爸', icon: '👓' },
-        { id: 'mom', name: '豬媽媽', icon: '👒' },
-        { id: 'brother', name: '豬弟', icon: '🧢' }
-    ];
-    const FAMILY_IDS = FAMILY_MEMBERS.map(m => m.id);
-
     const DESTINATION_SETTINGS = {
         'tokyo': { currency: 'JPY', name: '東京' },
         'osaka': { currency: 'JPY', name: '大阪' },
+        'seoul': { currency: 'KRW', name: '首爾' },
         'default': { currency: 'CUR', name: '旅遊' }
     };
     const getSettings = (destInput) => {
         if (!destInput) return DESTINATION_SETTINGS['default'];
-        if (destInput.includes('東京')) return DESTINATION_SETTINGS['tokyo'];
-        if (destInput.includes('大阪')) return DESTINATION_SETTINGS['osaka'];
+        const lower = destInput.toLowerCase();
+        if (lower.includes('東京') || lower.includes('tokyo')) return DESTINATION_SETTINGS['tokyo'];
+        if (lower.includes('大阪') || lower.includes('osaka')) return DESTINATION_SETTINGS['osaka'];
+        if (lower.includes('首爾') || lower.includes('korea')) return DESTINATION_SETTINGS['seoul'];
         return DESTINATION_SETTINGS['default'];
     };
 
     const App = {
         setup() {
+            // -- State --
             const isInitializing = ref(true); 
             const isResetting = ref(false);
             const db = ref(null);
+            
+            // Login & User State
+            const loginForm = ref({ groupId: '', name: '', isAdmin: false });
+            const currentUser = ref(null);
+            const isLoginValid = computed(() => loginForm.value.groupId.trim().length > 1 && loginForm.value.name.trim().length > 0);
+
+            // Firestore References
             const tripSharedRef = ref(null);
             const currentWalletRef = ref(null);
-            let walletUnsubscribe = null; 
+            
+            // Listeners
+            let tripUnsubscribe = null;
+            let walletUnsubscribe = null;
 
+            // App State
             const activeTab = ref('itinerary'); 
             const tripExists = ref(false);
             const walletSetupComplete = ref(false);
-            const userProfile = ref(null); 
 
-            const wizard = ref({ appNameInput: '豬家旅遊', destinationInput: '', rateInput: 0.22, startDateInput: '', endDateInput: '' });
+            const wizard = ref({ appNameInput: '我的旅程', destinationInput: '', rateInput: 0.22, startDateInput: '', endDateInput: '' });
             const joiner = ref({ initialTWD: 20000 });
             
             const isEditingSettings = ref(false);
@@ -446,17 +532,25 @@
             const newTransaction = ref({ type: 'expense', currency: 'JPY', amount: '', notes: '', date: '', time: '' });
             const editingTxId = ref(null);
             const editingTransaction = ref({});
+            
+            const converter = ref({ rate: 0.22, amount: '' });
 
-            const tripSettings = ref({ appName: '豬家旅遊', destination: '', startDate: '', endDate: '', currency: 'JPY', rateTWD: 0.22 });
+            const tripSettings = ref({ appName: '我的旅程', destination: '', startDate: '', endDate: '', currency: 'JPY', rateTWD: 0.22 });
             const itinerary = ref({}); 
             const wallet = ref({ initialTWD: 0, initialForeign: 0, currentTWD: 0, currentForeign: 0 }); 
             const transactions = ref([]); 
 
+            // -- Computed --
             const appTitle = computed(() => tripSettings.value.appName);
             const detectedSettings = computed(() => getSettings(wizard.value.destinationInput));
             const joinerForeignCalculated = computed(() => (joiner.value.initialTWD / (tripSettings.value.rateTWD || 1)) || 0);
             const isWizardValid = computed(() => wizard.value.destinationInput && wizard.value.startDateInput && wizard.value.endDateInput);
             const isTransactionValid = computed(() => newTransaction.value.amount > 0 && newTransaction.value.notes && newTransaction.value.date);
+
+            const converterResult = computed(() => {
+                if (!converter.value.amount || !converter.value.rate) return 0;
+                return Math.round(converter.value.amount * converter.value.rate);
+            });
 
             const tripDays = computed(() => {
                 if(!tripSettings.value.startDate || !tripSettings.value.endDate) return [];
@@ -475,7 +569,33 @@
             
             const selectedDate = ref('');
             const selectedLocation = ref('');
+            const selectedDateDisplay = computed(() => tripDays.value.find(d => d.iso === selectedDate.value)?.display || '');
 
+            const mapUrl = computed(() => {
+                if (selectedLocation.value) {
+                    return `https://maps.google.com/maps?q=${encodeURIComponent(selectedLocation.value)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+                }
+                const items = itinerary.value[selectedDate.value] || [];
+                const locs = items.map(i => i.location).filter(l => l).join(' ');
+                const q = locs || tripSettings.value.destination;
+                return q ? `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=10&ie=UTF8&iwloc=&output=embed` : '';
+            });
+            
+            const filteredTransactions = computed(() => {
+                return transactions.value
+                    .filter(tx => tx.date === selectedDate.value)
+                    .sort((a, b) => {
+                        const tA = a.time || '00:00';
+                        const tB = b.time || '00:00';
+                        return tB.localeCompare(tA);
+                    });
+            }); 
+
+            // -- Watchers --
+            watch(() => tripSettings.value.rateTWD, (newRate) => {
+                if (newRate) converter.value.rate = newRate;
+            });
+            
             watch(tripDays, (v) => { 
                 if(v.length && !selectedDate.value) {
                     selectedDate.value = v[0].iso;
@@ -493,30 +613,8 @@
                 }
             });
 
-            const selectedDateDisplay = computed(() => tripDays.value.find(d => d.iso === selectedDate.value)?.display || '');
-
-            const mapUrl = computed(() => {
-                if (selectedLocation.value) {
-                    return `https://maps.google.com/maps?q=${encodeURIComponent(selectedLocation.value)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
-                }
-                const items = itinerary.value[selectedDate.value] || [];
-                const locs = items.map(i => i.location).filter(l => l).join(' ');
-                const q = locs || tripSettings.value.destination;
-                return q ? `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=10&ie=UTF8&iwloc=&output=embed` : '';
-            });
-
-            const focusMap = (loc) => { if (loc) selectedLocation.value = loc; };
-
-            const filteredTransactions = computed(() => {
-                return transactions.value
-                    .filter(tx => tx.date === selectedDate.value)
-                    .sort((a, b) => {
-                        const tA = a.time || '00:00';
-                        const tB = b.time || '00:00';
-                        return tB.localeCompare(tA);
-                    });
-            }); 
-
+            // -- Core Functions --
+            
             const recalculateWallet = () => {
                 const rate = parseFloat(tripSettings.value.rateTWD) || 0.22;
                 let totalTWD = parseFloat(wallet.value.initialTWD) || 0;
@@ -529,10 +627,56 @@
                 wallet.value.currentForeign = Math.round(totalTWD / rate); 
             };
 
-            const selectIdentity = (member) => {
-                userProfile.value = member;
+            // Login Logic
+            const handleLogin = () => {
+                if(!isLoginValid.value) return;
+                // Save to session/local storage if needed, here we just set state
+                currentUser.value = {
+                    groupId: loginForm.value.groupId.trim(),
+                    name: loginForm.value.name.trim(),
+                    isAdmin: loginForm.value.isAdmin
+                };
+                connectToFirestore();
+            };
+
+            const logout = () => {
+                if (tripUnsubscribe) tripUnsubscribe();
                 if (walletUnsubscribe) walletUnsubscribe();
-                currentWalletRef.value = doc(db.value, 'artifacts', appId, 'public', 'data', 'wallets', member.id);
+                currentUser.value = null;
+                tripExists.value = false;
+                walletSetupComplete.value = false;
+                loginForm.value = { groupId: '', name: '', isAdmin: false };
+            };
+
+            const connectToFirestore = () => {
+                // RULE 1: Strict paths.
+                // Trip Data: artifacts/{appId}/public/data/universal_trips/{groupId}
+                // Wallet Data: artifacts/{appId}/public/data/universal_wallets/{groupId}_{userName}
+                
+                const gid = currentUser.value.groupId;
+                const uname = currentUser.value.name;
+                
+                // 1. Listen to Trip Data
+                tripSharedRef.value = doc(db.value, 'artifacts', appId, 'public', 'data', 'universal_trips', gid);
+                tripUnsubscribe = onSnapshot(tripSharedRef.value, (snap) => {
+                    const d = snap.data();
+                    if (!snap.exists() || d?.status === 'RESET') {
+                        tripExists.value = false;
+                        itinerary.value = {};
+                        // Reset settings to default for wizard
+                        wizard.value = { appNameInput: '我的旅程', destinationInput: '', rateInput: 0.22, startDateInput: '', endDateInput: '' };
+                    } else {
+                        tripSettings.value = d.tripSettings || tripSettings.value;
+                        itinerary.value = d.itinerary || {};
+                        tripExists.value = true;
+                        if (tripSettings.value.rateTWD) converter.value.rate = tripSettings.value.rateTWD;
+                    }
+                    nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
+                });
+
+                // 2. Listen to My Wallet
+                const walletDocId = `${gid}_${uname}`;
+                currentWalletRef.value = doc(db.value, 'artifacts', appId, 'public', 'data', 'universal_wallets', walletDocId);
                 walletUnsubscribe = onSnapshot(currentWalletRef.value, (snap) => {
                     if (snap.exists()) {
                         const d = snap.data();
@@ -548,12 +692,17 @@
                 });
             };
 
-            const logout = () => { userProfile.value = null; if (walletUnsubscribe) walletUnsubscribe(); walletSetupComplete.value = false; };
-
             const createTrip = async () => {
                 const s = detectedSettings.value;
-                const newSettings = { appName: wizard.value.appNameInput, destination: s.name, startDate: wizard.value.startDateInput, endDate: wizard.value.endDateInput, currency: s.currency, rateTWD: parseFloat(wizard.value.rateInput) };
-                await setDoc(tripSharedRef.value, { tripSettings: newSettings, itinerary: {}, status: 'ACTIVE' });
+                const newSettings = { 
+                    appName: wizard.value.appNameInput, 
+                    destination: s.name || wizard.value.destinationInput, 
+                    startDate: wizard.value.startDateInput, 
+                    endDate: wizard.value.endDateInput, 
+                    currency: s.currency, 
+                    rateTWD: parseFloat(wizard.value.rateInput) 
+                };
+                await setDoc(tripSharedRef.value, { tripSettings: newSettings, itinerary: {}, status: 'ACTIVE', createdBy: currentUser.value.name });
             };
 
             const setupMyWallet = async () => {
@@ -563,7 +712,9 @@
                 await setDoc(currentWalletRef.value, { wallet: newWallet, transactions: [] });
             };
 
+            // Shared Trip Operations
             const saveShared = async () => setDoc(tripSharedRef.value, { itinerary: itinerary.value }, { merge: true });
+            
             const addNewItem = async (date) => {
                 if (!itinerary.value[date]) itinerary.value[date] = [];
                 itinerary.value[date].push({ id: generateId(), time: '10:00', location: '', notes: '', isEditing: true });
@@ -573,7 +724,9 @@
             const editItem = (d, i) => { itinerary.value[d][i].isEditing = true; };
             const deleteItem = (d, i) => { itinerary.value[d].splice(i, 1); saveShared(); };
 
+            // Wallet Operations
             const saveWallet = async () => setDoc(currentWalletRef.value, { wallet: wallet.value, transactions: transactions.value });
+            
             const addTransaction = async () => {
                 transactions.value.push({ ...newTransaction.value, id: generateId() });
                 recalculateWallet(); await saveWallet();
@@ -594,6 +747,7 @@
                 cancelTransactionEdit();
             };
 
+            // Admin Settings
             const openEditSettings = () => {
                 editWizard.value = JSON.parse(JSON.stringify(tripSettings.value));
                 isEditingSettings.value = true;
@@ -606,19 +760,17 @@
             };
 
             const resetTrip = async () => {
-                if (confirm("⚠️ 警告：這將會刪除所有人的資料，無法復原！確定嗎？")) {
+                if (confirm("⚠️ 警告：這將會刪除所有人的行程資料！(錢包資料將會保留但變為孤兒資料)。確定嗎？")) {
                     try {
                         isResetting.value = true;
-                        await setDoc(tripSharedRef.value, { status: 'RESET' });
-                        for (const fid of FAMILY_IDS) {
-                            const wRef = doc(db.value, 'artifacts', appId, 'public', 'data', 'wallets', fid);
-                            await deleteDoc(wRef);
-                        }
+                        // For universal app, we just delete the trip doc. 
+                        // Users' wallets are separate docs, we can't delete them all easily without a list, 
+                        // but deleting the trip doc effectively "hides" the trip.
                         await deleteDoc(tripSharedRef.value);
+                        
                         isEditingSettings.value = false;
-                        userProfile.value = null;
                         tripExists.value = false;
-                        alert("已解散群組，回到起始頁面。");
+                        alert("已解散群組。");
                     } catch (e) { 
                         console.error("Reset failed", e); 
                         alert("重設失敗: " + e.message); 
@@ -628,41 +780,27 @@
                 }
             };
 
-            const initFirebase = async () => {
+            const focusMap = (loc) => { if (loc) selectedLocation.value = loc; };
+            const renderIcons = () => nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
+            
+            watch([itinerary, transactions, activeTab, editingTxId, isEditingSettings, selectedLocation, selectedDate, currentUser], renderIcons, { deep: true });
+
+            onMounted(async () => { 
+                // Initialize Firebase
                 if (!firebaseConfig) return;
                 const app = initializeApp(firebaseConfig);
                 const auth = getAuth(app);
                 db.value = getFirestore(app);
-                try { if (initialAuthToken) await signInWithCustomToken(auth, initialAuthToken); else await signInAnonymously(auth); } catch {}
-                tripSharedRef.value = doc(db.value, 'artifacts', appId, 'public', 'data', 'trip_shared', 'main_v6'); 
-                onSnapshot(tripSharedRef.value, (snap) => {
-                    const d = snap.data();
-                    if (!snap.exists() || d?.status === 'RESET') {
-                        tripExists.value = false;
-                        walletSetupComplete.value = false;
-                        userProfile.value = null;
-                        itinerary.value = {};
-                        isEditingSettings.value = false;
-                        wizard.value = { appNameInput: '豬家旅遊', destinationInput: '', rateInput: 0.22, startDateInput: '', endDateInput: '' };
-                    } else {
-                        tripSettings.value = d.tripSettings || tripSettings.value;
-                        itinerary.value = d.itinerary || {};
-                        tripExists.value = true;
-                    }
-                    nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
-                    isInitializing.value = false;
-                });
-            };
-
-            const renderIcons = () => nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
-            
-            // 【關鍵修正】：這裡加入了 'selectedDate'，確保切換日期時圖標會重新繪製！
-            watch([itinerary, transactions, activeTab, editingTxId, isEditingSettings, selectedLocation, selectedDate], renderIcons, { deep: true });
-
-            onMounted(() => { initFirebase(); });
+                try { 
+                    if (initialAuthToken) await signInWithCustomToken(auth, initialAuthToken); 
+                    else await signInAnonymously(auth); 
+                } catch {}
+                isInitializing.value = false; 
+            });
 
             return {
-                isInitializing, isResetting, userProfile, familyMembers: FAMILY_MEMBERS, selectIdentity, logout,
+                isInitializing, isResetting, 
+                loginForm, currentUser, isLoginValid, handleLogin, logout,
                 tripExists, walletSetupComplete, wizard, detectedSettings, isWizardValid, createTrip,
                 joiner, joinerForeignCalculated, setupMyWallet,
                 tripSettings, appTitle, itinerary, selectedDate, selectedDateDisplay, tripDays, mapUrl, activeTab,
@@ -672,7 +810,8 @@
                 editingTxId, editingTransaction, editTransaction, cancelTransactionEdit, saveTransactionEdit,
                 resetTrip,
                 isEditingSettings, editWizard, openEditSettings, saveTripSettings,
-                selectedLocation, focusMap
+                selectedLocation, focusMap,
+                converter, converterResult
             };
         }
     };
@@ -681,7 +820,4 @@
 
 </body>
 </html>
-
-
-
 
