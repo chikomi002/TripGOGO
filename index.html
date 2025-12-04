@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TripGoGo 旅行記帳</title>
-    <!-- 1. 修正：App 圖標換回您的豬豬機長圖 -->
     <link rel="icon" href="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true">
     <link rel="apple-touch-icon" href="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true">
     
@@ -19,7 +18,7 @@
             --color-latte: #d2b48c;
             --color-mocha: #6f4e37;
             --color-text: #2c2c2c;
-            --color-accent: #d97706; /* Amber-600 */
+            --color-accent: #d97706;
         }
 
         body {
@@ -71,7 +70,6 @@
 
         .milk-tea-text { color: var(--color-mocha); }
         
-        /* Login Form Styles */
         .login-input {
             width: 100%;
             padding: 12px;
@@ -79,10 +77,25 @@
             border-radius: 12px;
             transition: all 0.3s;
             outline: none;
+            font-size: 16px;
         }
         .login-input:focus {
             border-color: var(--color-accent);
             background-color: #fffbeb;
+        }
+
+        /* 複製代碼區塊樣式 */
+        .code-display {
+            background-color: #2c2c2c;
+            color: #fbbf24;
+            font-family: monospace;
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 10px;
+            border: 2px dashed #fbbf24;
         }
     </style>
 </head>
@@ -94,12 +107,10 @@
         <!-- Header -->
         <div class="mb-6 text-center relative">
             <h1 class="text-3xl font-extrabold milk-tea-text tracking-tight flex items-center justify-center gap-2">
-                <!-- Header 小圖標 -->
                 <img src="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true" class="w-8 h-8 rounded-lg shadow-sm">
                 {{ appTitle }}
             </h1>
             
-            <!-- Admin Edit Button (Only visible if currentUser is Admin) -->
             <button v-if="currentUser && currentUser.isAdmin && tripExists" 
                 @click="openEditSettings"
                 class="absolute top-1 right-0 text-gray-400 hover:text-gray-600 p-2">
@@ -108,7 +119,7 @@
 
             <p v-if="currentUser" class="text-sm text-gray-500 mt-2 font-bold flex items-center justify-center gap-1">
                 Hi, {{ currentUser.name }} 
-                <span v-if="currentUser.isAdmin" class="bg-yellow-100 text-yellow-700 text-[10px] px-1 rounded border border-yellow-200">管理員</span>
+                <span v-if="currentUser.isAdmin" class="bg-yellow-100 text-yellow-700 text-[10px] px-1 rounded border border-yellow-200">主辦人</span>
                 <span v-else class="bg-gray-100 text-gray-600 text-[10px] px-1 rounded border border-gray-200">成員</span>
                 <button @click="logout" class="text-[10px] underline text-gray-400 ml-2 hover:text-gray-600">登出</button>
             </p>
@@ -116,30 +127,32 @@
 
         <!-- 0. Loading -->
         <div v-if="isInitializing" class="text-center py-20 bg-white rounded-xl shadow-inner flex flex-col items-center justify-center">
-            <!-- Loading 時也顯示小豬 -->
             <img src="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true" class="w-20 h-20 rounded-2xl mb-4 animate-bounce shadow-lg">
             <p class="text-gray-600 font-bold animate-pulse">TripGoGo為您加載中🐽</p>
         </div>
         
-        <!-- 1. Universal Login Form -->
+        <!-- 1. Universal Login Form (Redesigned) -->
         <div v-if="!isInitializing && !currentUser" class="modal-overlay">
             <div class="modal-content">
-                <div class="text-center mb-6">
-                    <!-- 2. 修正：登入畫面顯示大張的豬豬圖 -->
-                    <img src="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true" class="w-24 h-24 rounded-3xl mx-auto mb-4 shadow-lg border-4 border-white">
+                <div class="text-center mb-4">
+                    <img src="https://github.com/chikomi002/TripGOGO/blob/main/icon.JPG?raw=true" class="w-20 h-20 rounded-3xl mx-auto mb-3 shadow-lg border-4 border-white">
                     <h2 class="text-2xl font-extrabold milk-tea-text">歡迎使用 TripGoGo</h2>
-                    <p class="text-xs text-gray-500 mt-1">輸入相同的「群組代碼」即可與朋友共享行程</p>
                 </div>
                 
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-bold mb-1 text-gray-700">群組代碼 (Group ID)</label>
-                        <div class="relative">
-                            <i data-lucide="users" class="absolute left-3 top-3 w-5 h-5 text-gray-400"></i>
-                            <input type="text" v-model="loginForm.groupId" class="login-input pl-10" placeholder="例如: Tokyo2024" />
-                        </div>
-                    </div>
+                <!-- Tab Switcher -->
+                <div class="flex p-1 bg-gray-200 rounded-xl mb-6">
+                    <button @click="setLoginMode('join')" 
+                        :class="['flex-1 py-2 rounded-lg text-sm font-bold transition-all', loginMode === 'join' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700']">
+                        加入旅程
+                    </button>
+                    <button @click="setLoginMode('create')" 
+                        :class="['flex-1 py-2 rounded-lg text-sm font-bold transition-all', loginMode === 'create' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700']">
+                        建立新旅程
+                    </button>
+                </div>
 
+                <!-- Input Fields -->
+                <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-bold mb-1 text-gray-700">您的暱稱</label>
                         <div class="relative">
@@ -148,35 +161,51 @@
                         </div>
                     </div>
 
-                    <!-- Role Selection -->
-                    <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
-                        <span class="block text-xs font-bold text-gray-500 mb-2">選擇身分</span>
-                        <div class="flex gap-2">
-                            <button @click="loginForm.isAdmin = false" 
-                                :class="['flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-1', !loginForm.isAdmin ? 'bg-white border-2 border-gray-400 text-gray-700 shadow-sm' : 'text-gray-400 hover:bg-gray-100']">
-                                成員
-                            </button>
-                            <button @click="loginForm.isAdmin = true"
-                                :class="['flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-1', loginForm.isAdmin ? 'bg-white border-2 border-orange-500 text-orange-700 shadow-sm' : 'text-gray-400 hover:bg-gray-100']">
-                                <i data-lucide="shield" class="w-3 h-3"></i> 管理員
-                            </button>
+                    <!-- Mode: Join -->
+                    <div v-if="loginMode === 'join'" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-gray-700">輸入旅行代碼</label>
+                            <div class="relative">
+                                <i data-lucide="key" class="absolute left-3 top-3 w-5 h-5 text-gray-400"></i>
+                                <input type="text" v-model="loginForm.groupId" class="login-input pl-10 uppercase" placeholder="主辦人給的代碼" />
+                            </div>
                         </div>
+                        <!-- Optional: Admin Re-login toggle -->
+                        <div class="flex items-center gap-2 mt-2">
+                            <input type="checkbox" id="adminCheck" v-model="loginForm.isAdmin" class="w-4 h-4 text-orange-600 rounded">
+                            <label for="adminCheck" class="text-xs text-gray-500">我是主辦人 (登入回來設定)</label>
+                        </div>
+                    </div>
+
+                    <!-- Mode: Create -->
+                    <div v-if="loginMode === 'create'" class="bg-orange-50 p-4 rounded-xl border border-orange-100 text-center">
+                        <p class="text-xs text-gray-500 mb-2 font-bold">系統為您生成的專屬代碼</p>
+                        <div class="code-display" @click="copyCode">
+                            {{ generatedCode }}
+                        </div>
+                        <button @click="copyCode" class="text-xs text-orange-600 hover:text-orange-800 font-bold underline mb-2 flex items-center justify-center gap-1 mx-auto">
+                            <i data-lucide="copy" class="w-3 h-3"></i> {{ copyBtnText }}
+                        </button>
+                        <p class="text-[10px] text-gray-400">請複製此代碼並傳給您的旅伴</p>
                     </div>
                 </div>
 
                 <button @click="handleLogin" :disabled="!isLoginValid" 
                     :class="['w-full mt-6 py-3 font-bold rounded-lg text-white shadow-md transition-transform active:scale-95', isLoginValid ? 'bg-orange-600 hover:bg-orange-700' : 'bg-gray-300 cursor-not-allowed']">
-                    進入旅程
+                    {{ loginMode === 'create' ? '開始建立行程' : '出發！' }}
                 </button>
             </div>
         </div>
 
-        <!-- 2. Create Trip (Only for Admin if trip doesn't exist) -->
+        <!-- 2. Create Trip (Only for Admin) -->
         <div v-if="!isInitializing && currentUser && !tripExists" class="modal-overlay">
             <div class="modal-content">
                 <div v-if="currentUser.isAdmin">
                     <h2 class="text-2xl font-extrabold text-center milk-tea-text mb-4">建立新行程</h2>
-                    <p class="text-xs text-gray-500 text-center mb-4">群組「{{ currentUser.groupId }}」尚無資料。<br>身為管理員，請設定旅遊地點。</p>
+                    <div class="bg-yellow-50 p-3 rounded-lg text-center mb-4 border border-yellow-100">
+                        <p class="text-xs text-gray-500">本團代碼</p>
+                        <p class="font-mono font-bold text-lg text-yellow-700">{{ currentUser.groupId }}</p>
+                    </div>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-bold mb-1">App 標題</label>
@@ -201,80 +230,43 @@
                     <button @click="createTrip" :disabled="!isWizardValid" :class="['w-full mt-6 py-3 font-bold rounded-lg text-white', isWizardValid ? 'bg-orange-600' : 'bg-gray-300']">建立行程</button>
                 </div>
                 <div v-else class="text-center">
-                    <h2 class="text-xl font-bold mb-2">等待行程建立</h2>
-                    <div class="text-6xl mb-4">⏳</div>
-                    <p class="text-gray-500 text-sm">此群組尚未建立行程。</p>
-                    <p class="text-gray-500 text-sm mt-2">請聯絡您的<b>管理員</b>來設定行程。</p>
-                    <button @click="logout" class="mt-6 text-orange-600 underline text-sm">返回登入</button>
+                    <h2 class="text-xl font-bold mb-2">查無行程</h2>
+                    <div class="text-6xl mb-4">🤔</div>
+                    <p class="text-gray-500 text-sm">代碼 <b>{{ currentUser.groupId }}</b> 似乎還沒有建立行程。</p>
+                    <p class="text-gray-500 text-sm mt-2">如果您是主辦人，請使用管理員身份登入。</p>
+                    <button @click="logout" class="mt-6 text-orange-600 underline text-sm">返回重新登入</button>
                 </div>
             </div>
         </div>
 
-        <!-- 2.5 Edit Trip Settings Modal -->
-        <div v-if="isEditingSettings" class="modal-overlay">
-            <div class="modal-content">
-                <h2 class="text-2xl font-extrabold text-center milk-tea-text mb-4">修改行程設定</h2>
-                <div class="space-y-4 mb-6">
-                    <div>
-                        <label class="block text-sm font-bold mb-1">App 標題</label>
-                        <input type="text" v-model="editWizard.appName" class="w-full p-3 border rounded-lg" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-1">目的地</label>
-                        <input type="text" v-model="editWizard.destination" class="w-full p-3 border rounded-lg" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-1">匯率</label>
-                        <input type="number" v-model.number="editWizard.rateTWD" step="0.001" class="w-full p-3 border rounded-lg" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-1">日期範圍</label>
-                        <div class="flex gap-2">
-                            <input type="date" v-model="editWizard.startDate" class="w-full p-3 border rounded-lg" />
-                            <input type="date" v-model="editWizard.endDate" class="w-full p-3 border rounded-lg" />
-                        </div>
-                    </div>
-                </div>
-                <div class="flex gap-2">
-                    <button @click="isEditingSettings = false" class="flex-1 py-3 font-bold rounded-lg bg-gray-200 text-gray-700">取消</button>
-                    <button @click="saveTripSettings" class="flex-1 py-3 font-bold rounded-lg bg-green-600 text-white">儲存修改</button>
-                </div>
-                <div class="mt-8 pt-6 border-t border-gray-200">
-                    <p class="text-xs text-red-600 font-bold mb-2 flex items-center">
-                        <i data-lucide="alert-triangle" class="w-3 h-3 mr-1"></i> 危險區域
-                    </p>
-                    <button @click="resetTrip" :disabled="isResetting" class="w-full py-3 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 text-sm font-bold transition-colors">
-                        {{ isResetting ? '正在刪除...' : '解散群組 (刪除所有資料)' }}
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. Wallet Setup -->
+        <!-- 3. Wallet Setup (Personal) -->
         <div v-if="!isInitializing && currentUser && tripExists && !walletSetupComplete" class="modal-overlay">
             <div class="modal-content">
                 <div class="text-center mb-4">
-                    <h2 class="text-2xl font-extrabold milk-tea-text">設定 {{ currentUser.name }} 的錢包</h2>
+                    <h2 class="text-2xl font-extrabold milk-tea-text">💰 設定您的個人錢包</h2>
+                    <p class="text-lg font-bold text-orange-600 mt-2">嗨，{{ currentUser.name }}！</p>
                 </div>
-                <p class="text-xs text-gray-500 text-center mb-4">這是您個人的私房錢，<br>請輸入您這次帶了多少台幣。</p>
+                <p class="text-xs text-gray-500 text-center mb-4">這是您個人的私房錢設定。<br>請輸入您這次帶了多少台幣。</p>
                 <div class="space-y-4 pt-4 border-t border-gray-200">
                     <div>
                         <label class="block text-sm font-bold mb-1">初始台幣資金</label>
-                        <input type="number" v-model.number="joiner.initialTWD" class="w-full p-3 border rounded-lg text-right font-mono text-lg" />
+                        <input type="number" v-model.number="joiner.initialTWD" placeholder="請輸入金額 (例: 20000)" class="w-full p-3 border rounded-lg text-right font-mono text-lg" />
                     </div>
                     <div class="bg-gray-100 p-3 rounded-lg flex justify-between items-center">
                         <span class="text-sm text-gray-600">約合 {{ tripSettings.currency }}</span>
                         <span class="font-bold text-lg">{{ joinerForeignCalculated.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</span>
                     </div>
                 </div>
-                <button @click="setupMyWallet" class="w-full mt-6 py-3 font-bold rounded-lg bg-orange-600 text-white">開啟我的錢包</button>
+                <button @click="setupMyWallet" :disabled="!joiner.initialTWD || joiner.initialTWD <= 0" 
+                    :class="['w-full mt-6 py-3 font-bold rounded-lg text-white transition-colors', (!joiner.initialTWD || joiner.initialTWD <= 0) ? 'bg-gray-300 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700']">
+                    開啟我的錢包
+                </button>
             </div>
         </div>
 
         <!-- 4. Main Interface -->
         <div v-else-if="!isInitializing && currentUser && tripExists && walletSetupComplete">
             
-            <!-- Wallet Summary (Always Global) -->
             <section class="p-4 bg-white rounded-xl shadow-lg mb-6 border border-gray-100 relative overflow-hidden">
                 <div class="absolute top-0 right-0 bg-orange-600 text-white text-[10px] px-2 py-1 rounded-bl-lg font-bold">Private</div>
                 <h3 class="text-lg font-extrabold flex items-center milk-tea-text mb-2">
@@ -293,13 +285,11 @@
                 </div>
             </section>
             
-            <!-- Tabs -->
             <div class="flex justify-center mb-6 space-x-2">
                 <button @click="activeTab = 'itinerary'" :class="['flex-1 py-2 rounded-xl font-bold border transition-colors', activeTab === 'itinerary' ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-600']">共用行程</button>
                 <button @click="activeTab = 'wallet'" :class="['flex-1 py-2 rounded-xl font-bold border transition-colors', activeTab === 'wallet' ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-600']">記帳</button>
             </div>
 
-            <!-- Date Selection (Controls both Itinerary and Wallet Filter) -->
             <section class="mb-6">
                 <h3 class="text-xl font-bold mb-3">日期 ({{ selectedDateDisplay }})</h3>
                 <div class="flex space-x-3 pb-3 horizontal-scroll-container overflow-x-scroll">
@@ -311,7 +301,6 @@
                 </div>
             </section>
             
-            <!-- Itinerary Tab -->
             <div v-if="activeTab === 'itinerary'">
                 <div v-if="itinerary[selectedDate]?.length === 0" class="text-center py-10 bg-white rounded-xl text-gray-500 border border-dashed border-gray-300">
                     <p>本日尚無行程</p>
@@ -344,7 +333,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- Allow anyone to add items, or just admin? Let's allow anyone for convenience, or stick to admin -->
                 <button @click="addNewItem(selectedDate)" class="w-full mt-4 py-3 bg-gray-800 text-white font-bold rounded-lg shadow-md flex items-center justify-center">
                     <i data-lucide="plus" class="w-5 h-5 mr-2"></i> 新增行程
                 </button>
@@ -358,9 +346,7 @@
                 </section>
             </div>
             
-            <!-- Wallet Tab -->
             <div v-if="activeTab === 'wallet'">
-                <!-- Currency Converter -->
                 <div class="p-4 bg-orange-100 rounded-xl shadow-md mb-6 border border-orange-200">
                     <h4 class="font-extrabold text-lg mb-3 milk-tea-text flex items-center">
                         <i data-lucide="calculator" class="w-5 h-5 mr-2"></i> 匯率換算小幫手
@@ -459,6 +445,46 @@
                 </div>
             </div>
         </div>
+
+        <!-- 2.5 Edit Trip Settings Modal -->
+        <div v-if="isEditingSettings" class="modal-overlay">
+            <div class="modal-content">
+                <h2 class="text-2xl font-extrabold text-center milk-tea-text mb-4">修改行程設定</h2>
+                <div class="space-y-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-bold mb-1">App 標題</label>
+                        <input type="text" v-model="editWizard.appName" class="w-full p-3 border rounded-lg" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">目的地</label>
+                        <input type="text" v-model="editWizard.destination" class="w-full p-3 border rounded-lg" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">匯率</label>
+                        <input type="number" v-model.number="editWizard.rateTWD" step="0.001" class="w-full p-3 border rounded-lg" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">日期範圍</label>
+                        <div class="flex gap-2">
+                            <input type="date" v-model="editWizard.startDate" class="w-full p-3 border rounded-lg" />
+                            <input type="date" v-model="editWizard.endDate" class="w-full p-3 border rounded-lg" />
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button @click="isEditingSettings = false" class="flex-1 py-3 font-bold rounded-lg bg-gray-200 text-gray-700">取消</button>
+                    <button @click="saveTripSettings" class="flex-1 py-3 font-bold rounded-lg bg-green-600 text-white">儲存修改</button>
+                </div>
+                <div class="mt-8 pt-6 border-t border-gray-200">
+                    <p class="text-xs text-red-600 font-bold mb-2 flex items-center">
+                        <i data-lucide="alert-triangle" class="w-3 h-3 mr-1"></i> 危險區域
+                    </p>
+                    <button @click="resetTrip" :disabled="isResetting" class="w-full py-3 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 text-sm font-bold transition-colors">
+                        {{ isResetting ? '正在刪除...' : '解散群組 (刪除所有資料)' }}
+                    </button>
+                </div>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -486,6 +512,17 @@
     const { ref, computed, watch, onMounted, nextTick } = Vue;
     const generateId = () => Math.random().toString(36).substring(2, 9);
     
+    // 生成隨機代碼函數 (6碼亂數)
+    const generateGroupCode = () => {
+        // 使用日期 + 亂數確保不重複且有點規律 (例如: TG8392)
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 去除容易混淆的 I, 1, O, 0
+        let result = 'TG-';
+        for (let i = 0; i < 4; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
+
     const DESTINATION_SETTINGS = {
         'tokyo': { currency: 'JPY', name: '東京' },
         'osaka': { currency: 'JPY', name: '大阪' },
@@ -503,31 +540,63 @@
 
     const App = {
         setup() {
-            // -- State --
             const isInitializing = ref(true); 
             const isResetting = ref(false);
             const db = ref(null);
             
-            // Login & User State
+            // Login State
+            const loginMode = ref('join'); // 'join' or 'create'
             const loginForm = ref({ groupId: '', name: '', isAdmin: false });
+            const generatedCode = ref(generateGroupCode());
+            const copyBtnText = ref('複製代碼');
             const currentUser = ref(null);
-            const isLoginValid = computed(() => loginForm.value.groupId.trim().length > 1 && loginForm.value.name.trim().length > 0);
+
+            const isLoginValid = computed(() => {
+                if (!loginForm.value.name.trim()) return false;
+                if (loginMode.value === 'join') {
+                    return loginForm.value.groupId.trim().length > 3;
+                } else {
+                    return true; // Create mode always valid if name is present (ID is auto)
+                }
+            });
+
+            // Set login mode (switch tabs)
+            const setLoginMode = (mode) => {
+                loginMode.value = mode;
+                if (mode === 'create') {
+                    // Regenerate just in case, or keep the same session one
+                    if(!generatedCode.value) generatedCode.value = generateGroupCode();
+                    loginForm.value.groupId = generatedCode.value;
+                    loginForm.value.isAdmin = true;
+                } else {
+                    loginForm.value.groupId = '';
+                    loginForm.value.isAdmin = false;
+                }
+            };
+
+            const copyCode = async () => {
+                try {
+                    await navigator.clipboard.writeText(generatedCode.value);
+                    copyBtnText.value = '已複製！';
+                    setTimeout(() => copyBtnText.value = '複製代碼', 2000);
+                } catch (err) {
+                    console.error('Failed to copy', err);
+                }
+            };
 
             // Firestore References
             const tripSharedRef = ref(null);
             const currentWalletRef = ref(null);
             
-            // Listeners
             let tripUnsubscribe = null;
             let walletUnsubscribe = null;
 
-            // App State
             const activeTab = ref('itinerary'); 
             const tripExists = ref(false);
             const walletSetupComplete = ref(false);
 
             const wizard = ref({ appNameInput: '我的旅程', destinationInput: '', rateInput: 0.22, startDateInput: '', endDateInput: '' });
-            const joiner = ref({ initialTWD: 20000 });
+            const joiner = ref({ initialTWD: '' });
             
             const isEditingSettings = ref(false);
             const editWizard = ref({});
@@ -617,7 +686,6 @@
             });
 
             // -- Core Functions --
-            
             const recalculateWallet = () => {
                 const rate = parseFloat(tripSettings.value.rateTWD) || 0.22;
                 let totalTWD = parseFloat(wallet.value.initialTWD) || 0;
@@ -630,12 +698,17 @@
                 wallet.value.currentForeign = Math.round(totalTWD / rate); 
             };
 
-            // Login Logic
             const handleLogin = () => {
                 if(!isLoginValid.value) return;
-                // Save to session/local storage if needed, here we just set state
+                
+                // If creating, ensure ID is set
+                if (loginMode.value === 'create') {
+                    loginForm.value.groupId = generatedCode.value;
+                    loginForm.value.isAdmin = true;
+                }
+
                 currentUser.value = {
-                    groupId: loginForm.value.groupId.trim(),
+                    groupId: loginForm.value.groupId.trim().toUpperCase(),
                     name: loginForm.value.name.trim(),
                     isAdmin: loginForm.value.isAdmin
                 };
@@ -648,14 +721,16 @@
                 currentUser.value = null;
                 tripExists.value = false;
                 walletSetupComplete.value = false;
+                
+                // Reset states
+                loginMode.value = 'join';
                 loginForm.value = { groupId: '', name: '', isAdmin: false };
+                generatedCode.value = generateGroupCode(); // New code for next time
+                joiner.value = { initialTWD: '' };
+                wallet.value = { initialTWD: 0, initialForeign: 0, currentTWD: 0, currentForeign: 0 };
             };
 
             const connectToFirestore = () => {
-                // RULE 1: Strict paths.
-                // Trip Data: artifacts/{appId}/public/data/universal_trips/{groupId}
-                // Wallet Data: artifacts/{appId}/public/data/universal_wallets/{groupId}_{userName}
-                
                 const gid = currentUser.value.groupId;
                 const uname = currentUser.value.name;
                 
@@ -666,7 +741,6 @@
                     if (!snap.exists() || d?.status === 'RESET') {
                         tripExists.value = false;
                         itinerary.value = {};
-                        // Reset settings to default for wizard
                         wizard.value = { appNameInput: '我的旅程', destinationInput: '', rateInput: 0.22, startDateInput: '', endDateInput: '' };
                     } else {
                         tripSettings.value = d.tripSettings || tripSettings.value;
@@ -766,11 +840,7 @@
                 if (confirm("⚠️ 警告：這將會刪除所有人的行程資料！(錢包資料將會保留但變為孤兒資料)。確定嗎？")) {
                     try {
                         isResetting.value = true;
-                        // For universal app, we just delete the trip doc. 
-                        // Users' wallets are separate docs, we can't delete them all easily without a list, 
-                        // but deleting the trip doc effectively "hides" the trip.
                         await deleteDoc(tripSharedRef.value);
-                        
                         isEditingSettings.value = false;
                         tripExists.value = false;
                         alert("已解散群組。");
@@ -789,7 +859,6 @@
             watch([itinerary, transactions, activeTab, editingTxId, isEditingSettings, selectedLocation, selectedDate, currentUser], renderIcons, { deep: true });
 
             onMounted(async () => { 
-                // Initialize Firebase
                 if (!firebaseConfig) return;
                 const app = initializeApp(firebaseConfig);
                 const auth = getAuth(app);
@@ -803,7 +872,8 @@
 
             return {
                 isInitializing, isResetting, 
-                loginForm, currentUser, isLoginValid, handleLogin, logout,
+                loginMode, setLoginMode, loginForm, generatedCode, copyCode, copyBtnText,
+                currentUser, isLoginValid, handleLogin, logout,
                 tripExists, walletSetupComplete, wizard, detectedSettings, isWizardValid, createTrip,
                 joiner, joinerForeignCalculated, setupMyWallet,
                 tripSettings, appTitle, itinerary, selectedDate, selectedDateDisplay, tripDays, mapUrl, activeTab,
